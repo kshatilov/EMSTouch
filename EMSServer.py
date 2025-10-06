@@ -31,8 +31,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     if received == "touch":
                         if not ser:
                             continue
-                        ser.write(b'start_ems')
-                        ser.write(b'FE 7 2 20 250') 
+                        # ser.write(b'start_ems')
+                        ser.write(b'55 55 40 0 0 0 0 0 CB') 
                         #time.sleep(0.6)
                         #ser.write(b'stop_ems')
                     if received == "end":
