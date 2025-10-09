@@ -125,7 +125,7 @@ class EMSDriver:
                     crc >>= 1
         return crc & 0xFF
     
-    def _create_packet(self, command: int, channel: int, data: int = 0) -> bytes:
+    def create_packet(self, command: int, channel: int, data: int = 0) -> bytes:
         """
         Create a communication packet
         
@@ -242,7 +242,7 @@ class EMSDriver:
     
     def query_version(self) -> Optional[str]:
         """Query microcontroller version"""
-        packet = self._create_packet(Command.VERSION_QUERY, 0, 1)
+        packet = self.create_packet(Command.VERSION_QUERY, 0, 1)
         if self._send_packet(packet):
             response = self._receive_response()
             if response and self._verify_response(response, Command.VERSION_QUERY, 0):
@@ -261,7 +261,7 @@ class EMSDriver:
         Returns:
             True if command sent successfully
         """
-        packet = self._create_packet(Command.START_STOP_CONTROL, channel, 1)  # 1 = ENABLE
+        packet = self.create_packet(Command.START_STOP_CONTROL, channel, 1)  # 1 = ENABLE
         return self._send_packet(packet)
     
     def stop_channel(self, channel: int) -> bool:
@@ -274,7 +274,7 @@ class EMSDriver:
         Returns:
             True if command sent successfully
         """
-        packet = self._create_packet(Command.START_STOP_CONTROL, channel, 0)  # 0 = DISABLE
+        packet = self.create_packet(Command.START_STOP_CONTROL, channel, 0)  # 0 = DISABLE
         return self._send_packet(packet)
     
     def set_waveform_type(self, channel: int, waveform_type: WaveformType) -> bool:
@@ -288,7 +288,7 @@ class EMSDriver:
         Returns:
             True if command sent successfully
         """
-        packet = self._create_packet(Command.WAVEFORM_TYPE_CONFIG, channel, waveform_type)
+        packet = self.create_packet(Command.WAVEFORM_TYPE_CONFIG, channel, waveform_type)
         return self._send_packet(packet)
     
     def configure_register(self, channel: int, register: Register, value: int) -> bool:
@@ -304,7 +304,7 @@ class EMSDriver:
             True if command sent successfully
         """
         command = Command.REGISTER_CONFIG | register
-        packet = self._create_packet(command, channel, value)
+        packet = self.create_packet(command, channel, value)
         time.sleep(0.1)
         return self._send_packet(packet)
         
@@ -322,7 +322,7 @@ class EMSDriver:
             True if command sent successfully
         """
         command = Command.WAVEFORM_TIMING_CONFIG | timing_param
-        packet = self._create_packet(command, channel, value)
+        packet = self.create_packet(command, channel, value)
         return self._send_packet(packet)
     
     def configure_ems_waveform(self, channel: int, 
@@ -440,7 +440,7 @@ class EMSDriver:
 # Example usage and testing functions
 def test_basic_communication():
     """Test basic communication with microcontroller"""
-    with EMSDriver('/dev/tty.usbserial-110') as driver:
+    with EMSDriver('COM5') as driver:
         if driver.is_connected:
             # Query version
             version = driver.query_version()
@@ -550,6 +550,7 @@ if __name__ == "__main__":
     # Uncomment these to run other tests
     print("\nTesting basic communication...")
     test_basic_communication()
-    
+
+
     # print("\nTesting EMS waveform...")
     # test_ems_waveform()
