@@ -35,6 +35,7 @@ class EMSServer:
     def setup_driver(self):
         try:
             self.driver = EMSnewMcuDriver.WaveformDriver('COM4', 115200)
+            self.driver.connect()  # Open the serial port connection
             for channel in self.channels:
                 self.driver.configure_channel(
                     channel=channel,
@@ -81,7 +82,7 @@ class EMSServer:
 
                         if received == EMSServer.EMS_NET_STOP_CMD:
                             if self.driver:
-                                driver.stop_all()
+                                self.driver.stop_all()
             except AttributeError as e:
                 print(f"Components not initialized: {e}")
             except KeyboardInterrupt as e:
@@ -90,7 +91,8 @@ class EMSServer:
 if __name__ == "__main__":
     # server = EMSServer()
     # server.run()
-    driver = EMSnewMcuDriver.WaveformDriver('COM4', 115200)
+    driver = EMSnewMcuDriver.WaveformDriver('/dev/tty.usbserial-MQZXDN', 115200)
+    driver.connect()  # Open the serial port connection
     driver.configure_channel(
         channel=0,
         stimulation_period_us=16000,
