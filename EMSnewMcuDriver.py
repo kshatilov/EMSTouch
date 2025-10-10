@@ -291,7 +291,7 @@ class WaveformDriver:
         """
         Set current strength level (0-255).
         
-        The actual current is: 25.5 µA × current_range × (1 + level)
+        The actual current is: 25.5 µA × (current_range + 1)
         Where current_range is typically 1 (set in firmware).
         
         Args:
@@ -395,7 +395,7 @@ def main():
     """Example usage of the WaveformDriver."""
     
     # Configuration
-    PORT = '/dev/tty.usbserial-MQZXDN'  # Change to your serial port (e.g., '/dev/ttyUSB0' on Linux)
+    PORT = 'COM4'  # Change to your serial port (e.g., '/dev/ttyUSB0' on Linux)
     BAUDRATE = 115200
     
     print("=" * 70)
@@ -482,14 +482,14 @@ def main():
                 # driver.stop(channel=1)
                 # time.sleep(3)
 
-                for current_mA in range(5, 90, 3):
+                for current_mA in range(30, 80, 5):
                     print(f"Adjusting strength to {current_mA}...")
-                    driver.set_current(channel=1, current_mA=current_mA/10)
+                    driver.set_current(channel=0, current_mA=current_mA/10)
                     time.sleep(0.2)
             
-                for current_mA in range(90, 5, -3):
+                for current_mA in range(80, 30, -5):
                     print(f"Adjusting strength to {current_mA}...")
-                    driver.set_current(channel=1, current_mA=current_mA/10)
+                    driver.set_current(channel=0, current_mA=current_mA/10)
                     time.sleep(0.2)
             
             # driver.stop(channel=0)
@@ -500,6 +500,7 @@ def main():
         print(f"Connection error: {e}")
     except KeyboardInterrupt:
         print("\nInterrupted by user")
+        driver.stop_all()
     except Exception as e:
         print(f"Error: {e}")
     

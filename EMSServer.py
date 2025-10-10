@@ -1,7 +1,8 @@
 import socket
-import serial
+import threading
+import time
 
-import EMSMcuDriver
+import EMSnewMcuDriver
 
 
 class EMSServer:
@@ -13,9 +14,10 @@ class EMSServer:
     EMS_CONF_CMD = b'FE 7 2 20 250'
     # EMS_STOP_CMD = b'stop_ems'
 
-    EMS_START_CMD = EMSMcuDriver.EMSDriver("1").create_packet(EMSMcuDriver.Command.START_STOP_CONTROL, 0, 1)
-    EMS_STOP_CMD = EMSMcuDriver.EMSDriver("1").create_packet(EMSMcuDriver.Command.START_STOP_CONTROL, 0, 0)
-
+    # EMS_START_CMD = EMSMcuDriver.EMSDriver("1").create_packet(EMSMcuDriver.Command.START_STOP_CONTROL, 0, 1)
+    # EMS_STOP_CMD = EMSMcuDriver.EMSDriver("1").create_packet(EMSMcuDriver.Command.START_STOP_CONTROL, 0, 0)
+    EMS_NET_START_CMD = "EMS_beg_def_000"
+    EMS_NET_STOP_CMD = "EMS_end_def_000"
 
     def __init__(self, host=HOST, port=PORT, serial_port=SERIAL, baud_rate=BAUD_RATE):
         self.host = host
@@ -24,20 +26,27 @@ class EMSServer:
         self.baud_rate = baud_rate
         self.ser = None
         self.sock = None
-        self.setup_serial()
+        self.driver = None
+        self.channels = [0]
+        self.setup_driver()
+        # self.setup_serial()
         self.setup_socket()
 
-        self.start_cmd = EMSServer.EMS_START_CMD
-        self.conf_cmd = EMSServer.EMS_CONF_CMD
-        self.stop_cmd = EMSServer.EMS_STOP_CMD
-
-    def setup_serial(self):
+    def setup_driver(self):
         try:
-            self.ser = serial.Serial(self.serial_port, baudrate=self.baud_rate, timeout=1)
-            print(f"Serial connection established on {self.serial_port} at {self.baud_rate} baud.")
-        except serial.SerialException as e:
-            print(f"Error opening serial port {self.serial_port}: {e}")
-            self.ser = None
+            self.driver = EMSnewMcuDriver.WaveformDriver('COM4', 115200)
+            for channel in self.channels:
+                self.driver.configure_channel(
+                    channel=channel,
+                    stimulation_period_us=16000,
+                    on_time_us=400,
+                    pos_neg_gap_us=50,
+                    strength_level=160,
+                    paired_switch_config=self.driver.STIMU_16
+                )
+        except Exception as e:
+            print(f"Error initializing EMS driver: {e}")
+            self.driver = None
 
     def setup_socket(self):
         try:
@@ -56,22 +65,39 @@ class EMSServer:
                 with conn:
                     print(f"Connected by {addr}")
                     while True:
-                        data = conn.recv(1024)
+                        data = conn.recv(len(self.EMS_NET_START_CMD.encode()))
                         if not data:
                             break
                         received = data.decode()
                         print("Received:", received)
-                        if received == "touch":
-                            self.ser.write(self.start_cmd)
-                        if received == "end":
-                            self.ser.write(self.stop_cmd)
+                        if received == EMSServer.EMS_NET_START_CMD:
+                            for channel in self.channels:
+                                if self.driver:
+                                    self.driver.start_channel(channel)
+                                    for current_mA in range(30, 80, 5):
+                                        print(f"Adjusting strength to {current_mA}...")
+                                        self.driver.set_current(channel=0, current_mA=current_mA / 10)
+                                        time.sleep(0.2)
+
+                        if received == EMSServer.EMS_NET_STOP_CMD:
+                            if self.driver:
+                                driver.stop_all()
             except AttributeError as e:
                 print(f"Components not initialized: {e}")
             except KeyboardInterrupt as e:
                 print(f"Keyboard interrupt received, shutting down.: {e}")
 
 if __name__ == "__main__":
-    server = EMSServer()
-    server.run()
-
+    # server = EMSServer()
+    # server.run()
+    driver = EMSnewMcuDriver.WaveformDriver('COM4', 115200)
+    driver.configure_channel(
+        channel=0,
+        stimulation_period_us=16000,
+        on_time_us=400,
+        pos_neg_gap_us=50,
+        strength_level=160,
+        paired_switch_config=driver.STIMU_16
+    )
+    driver.start(0)
 

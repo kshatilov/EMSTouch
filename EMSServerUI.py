@@ -1,6 +1,9 @@
 import threading
+import time
 import tkinter as tk
 from tkinter import scrolledtext
+
+from tornado.gen import sleep
 
 from EMSServer import EMSServer
 
@@ -38,13 +41,17 @@ class EMSServerUI:
 
     def test_cmd(self):
         pass
-        # if self.server and self.server.ser:
-        #     self.server.ser.write(self.server.start_cmd)
+        if self.server and self.server.ser.is_open:
+            with threading.Lock():
+                self.server.ser.write(self.server.EMS_START_CMD)
+                time.sleep(0.6)
+                self.server.ser.write(self.server.EMS_STOP_CMD)
+                self.server.ser.flush()
 
     def update_cmd(self):
         cmd = self.main_cmd.get("1.0", tk.END).strip()
         if cmd:
-            self.server.start_cmd = cmd.encode()
+            self.server.start_cmd = bytes.fromhex(cmd)
         self.main_cmd.edit_modified(False)
 
     def update_serial(self):
@@ -60,7 +67,7 @@ class EMSServerUI:
         self.server = EMSServer()
         self.server_status.insert(tk.END, self.server.host + ":" + str(self.server.port))
         self.serial_status.insert(tk.END, self.server.serial_port + "@" + str(self.server.baud_rate))
-        self.main_cmd.insert(tk.END, self.server.start_cmd)
+        self.main_cmd.insert(tk.END, self.server.start_cmd.hex())
         thread = threading.Thread(target=self.server.run, daemon=True)
         thread.start()
 
