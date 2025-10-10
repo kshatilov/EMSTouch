@@ -304,6 +304,17 @@ class WaveformDriver:
         self._send_frame(self.CMD_STRENGTH_LEVEL, channel, level)
         print(f"Channel {channel}: Set strength level to {level}")
     
+    def set_current(self, channel: int, current_mA: float):
+        """
+        Set current in microamperes.
+        
+        Args:
+            channel: Channel number (0-7 for STIMU 8-15)
+            current_mA: Current in milliamperes
+        """
+        self.set_strength_level(channel, int(current_mA / 0.051))
+        print(f"Channel {channel}: Set current to {current_mA} mA")
+    
     def set_paired_switch(self, channel: int, config: int):
         """
         Set paired switch configuration (STIMU 16-23 enable bits).
@@ -397,14 +408,24 @@ def main():
             
             # # Example 1: Configure and start a single channel
             # print("\n--- Example 1: Single Channel Control ---")
-            # driver.configure_channel(
-            #     channel=0,
-            #     stimulation_period_us=20000,
-            #     on_time_us=400,
-            #     pos_neg_gap_us=50,
-            #     strength_level=160,
-            #     paired_switch_config=driver.STIMU_16
-            # )
+            driver.configure_channel(
+                channel=0,
+                stimulation_period_us=16000,
+                on_time_us=400,
+                pos_neg_gap_us=50,
+                strength_level=160,
+                paired_switch_config=driver.STIMU_16
+            )
+            # time.sleep(1)
+            driver.configure_channel(
+                channel=1,
+                stimulation_period_us=16000,
+                on_time_us=400,
+                pos_neg_gap_us=50,
+                strength_level=160,
+                paired_switch_config=driver.STIMU_17
+            )
+            # time.sleep(1)
             # driver.start(channel=0)
             # time.sleep(10)  # Run for 2 seconds
             # driver.stop(channel=0)
@@ -435,15 +456,43 @@ def main():
             
             # Example 3: Dynamic parameter adjustment
             print("\n--- Example 3: Dynamic Strength Adjustment ---")
-            driver.configure_channel(channel=0, strength_level=50)
+            # driver.configure_channel(channel=0, strength_level=1)
+            driver.set_current(channel=0, current_mA=3)
+            driver.set_current(channel=1, current_mA=6)
             driver.start(channel=0)
+            driver.start(channel=1)
             
-            for strength in range(10, 250, 10):
-                print(f"Adjusting strength to {strength}...")
-                driver.set_strength_level(channel=0, level=strength)
-                time.sleep(0.5)
+            # for current_mA in range(10, 60, 1):
+            #     print(f"Adjusting strength to {current_mA}...")
+            #     driver.set_current(channel=0, current_mA=current_mA/10)
+            #     time.sleep(0.5)
             
-            driver.stop(channel=0)
+            # for current_mA in range(60, 10, -1):
+            #     print(f"Adjusting strength to {current_mA}...")
+            #     driver.set_current(channel=0, current_mA=current_mA/10)
+            #     time.sleep(0.5)
+            while True:
+                
+                # driver.start(channel=0)
+                # time.sleep(1)
+                # driver.stop(channel=0)
+                # time.sleep(1)
+                # driver.start(channel=1)
+                # time.sleep(1)
+                # driver.stop(channel=1)
+                # time.sleep(3)
+
+                for current_mA in range(5, 90, 3):
+                    print(f"Adjusting strength to {current_mA}...")
+                    driver.set_current(channel=1, current_mA=current_mA/10)
+                    time.sleep(0.2)
+            
+                for current_mA in range(90, 5, -3):
+                    print(f"Adjusting strength to {current_mA}...")
+                    driver.set_current(channel=1, current_mA=current_mA/10)
+                    time.sleep(0.2)
+            
+            # driver.stop(channel=0)
             
             print("\n--- Examples complete ---")
     
