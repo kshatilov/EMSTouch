@@ -82,7 +82,7 @@ class WaveformDriver:
     STIMU_22 = 0x40
     STIMU_23 = 0x80
     
-    def __init__(self, port: str, baudrate: int = 115200, timeout: float = 1.0):
+    def __init__(self, port: str, baudrate: int = 115200, timeout: float = 1.0, verbose: bool = False):
         """
         Initialize the waveform driver.
         
@@ -95,6 +95,7 @@ class WaveformDriver:
         self.baudrate = baudrate
         self.timeout = timeout
         self.serial: Optional[serial.Serial] = None
+        self.verbose = verbose
         
     def connect(self):
         """Open the serial port connection."""
@@ -118,7 +119,8 @@ class WaveformDriver:
         """Close the serial port connection."""
         if self.serial and self.serial.is_open:
             self.serial.close()
-            print(f"Disconnected from {self.port}")
+            if self.verbose:
+                print(f"Disconnected from {self.port}")
     
     def __enter__(self):
         """Context manager entry."""
@@ -196,7 +198,7 @@ class WaveformDriver:
         
         # Debug output
         frame_hex = ' '.join(f'{b:02X}' for b in frame)
-        print(f"Sent: {frame_hex}")
+        if self.verbose:print(f"Sent: {frame_hex}")
         # time.sleep(0.1)
     
     # =========================================================================
@@ -211,7 +213,7 @@ class WaveformDriver:
             channel: Channel number (0-7 for STIMU 8-15)
         """
         self._send_frame(self.CMD_START, channel, 0x01)
-        print(f"Started channel {channel} (STIMU {8+channel})")
+        if self.verbose:print(f"Started channel {channel} (STIMU {8+channel})")
     
     def stop(self, channel: int):
         """
@@ -221,7 +223,7 @@ class WaveformDriver:
             channel: Channel number (0-7 for STIMU 8-15)
         """
         self._send_frame(self.CMD_STOP, channel, 0x00)
-        print(f"Stopped channel {channel} (STIMU {8+channel})")
+        if self.verbose:print(f"Stopped channel {channel} (STIMU {8+channel})")
     
     def start_all(self):
         """Start all channels (STIMU 8-15)."""
@@ -253,7 +255,7 @@ class WaveformDriver:
             raise ValueError(f"Period must be between 0 and {0xFFFFFFFF} us")
         
         self._send_frame(self.CMD_STIMULATION_PERIOD, channel, period_us)
-        print(f"Channel {channel}: Set stimulation period to {period_us} us")
+        if self.verbose:print(f"Channel {channel}: Set stimulation period to {period_us} us")
     
     def set_on_time(self, channel: int, on_time_us: int):
         """
@@ -267,9 +269,8 @@ class WaveformDriver:
         """
         if on_time_us < 0 or on_time_us > 0xFFFFFFFF:
             raise ValueError(f"On-time must be between 0 and {0xFFFFFFFF} us")
-        
         self._send_frame(self.CMD_ON_TIME, channel, on_time_us)
-        print(f"Channel {channel}: Set on-time to {on_time_us} us")
+        if self.verbose:print(f"Channel {channel}: Set on-time to {on_time_us} us")
     
     def set_pos_neg_gap(self, channel: int, gap_us: int):
         """
@@ -285,7 +286,7 @@ class WaveformDriver:
             raise ValueError(f"Gap must be between 0 and {0xFFFFFFFF} us")
         
         self._send_frame(self.CMD_POS_NEG_GAP, channel, gap_us)
-        print(f"Channel {channel}: Set pos-neg gap to {gap_us} us")
+        if self.verbose:print(f"Channel {channel}: Set pos-neg gap to {gap_us} us")
     
     def set_strength_level(self, channel: int, level: int):
         """
@@ -302,7 +303,7 @@ class WaveformDriver:
             raise ValueError("Strength level must be between 0 and 255")
         
         self._send_frame(self.CMD_STRENGTH_LEVEL, channel, level)
-        print(f"Channel {channel}: Set strength level to {level}")
+        if self.verbose:print(f"Channel {channel}: Set strength level to {level}")
     
     def set_current(self, channel: int, current_mA: float):
         """
@@ -313,7 +314,7 @@ class WaveformDriver:
             current_mA: Current in milliamperes
         """
         self.set_strength_level(channel, int(current_mA / 0.051))
-        print(f"Channel {channel}: Set current to {current_mA} mA")
+        if self.verbose:print(f"Channel {channel}: Set current to {current_mA} mA")
     
     def set_paired_switch(self, channel: int, config: int):
         """
@@ -344,7 +345,7 @@ class WaveformDriver:
             if config & (1 << i):
                 enabled.append(f"STIMU {16+i}")
         enabled_str = ", ".join(enabled) if enabled else "None"
-        print(f"Channel {channel}: Set paired switches to 0x{config:02X} ({enabled_str})")
+        if self.verbose:print(f"Channel {channel}: Set paired switches to 0x{config:02X} ({enabled_str})")
     
     # =========================================================================
     # Convenience Methods
@@ -364,7 +365,7 @@ class WaveformDriver:
             strength_level: Current level 0-255 (default: 160)
             paired_switch_config: Paired switch bits (default: 0x01)
         """
-        print(f"\n=== Configuring Channel {channel} (STIMU {8+channel}) ===")
+        if self.verbose:print(f"\n=== Configuring Channel {channel} (STIMU {8+channel}) ===")
         self.set_stimulation_period(channel, stimulation_period_us)
         time.sleep(0.01)
         self.set_on_time(channel, on_time_us)
@@ -375,7 +376,7 @@ class WaveformDriver:
         time.sleep(0.01)
         self.set_paired_switch(channel, paired_switch_config)
         time.sleep(0.01)
-        print(f"=== Channel {channel} configuration complete ===\n")
+        if self.verbose:print(f"=== Channel {channel} configuration complete ===\n")
     
     def get_version(self, channel: int = 0):
         """
@@ -385,7 +386,7 @@ class WaveformDriver:
             channel: Channel number (default: 0)
         """
         self._send_frame(self.CMD_VERSION, channel, 0x00)
-        print("Version request sent (if firmware supports it)")
+        if self.verbose:print("Version request sent (if firmware supports it)")
 
 
 # =============================================================================

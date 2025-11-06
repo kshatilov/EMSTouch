@@ -40,13 +40,13 @@ class EMSServerUI:
         self.start_server()
 
     def test_cmd(self):
-        pass
-        if self.server and self.server.ser.is_open:
-            with threading.Lock():
-                self.server.ser.write(self.server.EMS_START_CMD)
-                time.sleep(0.6)
-                self.server.ser.write(self.server.EMS_STOP_CMD)
-                self.server.ser.flush()
+        if self.server and self.server.driver:
+            self.server.driver.start(0)
+            for current_mA in range(50, 80, 5):
+                print(f"Adjusting strength to {current_mA}...")
+                self.server.driver.set_current(channel=0, current_mA=current_mA / 10)
+                time.sleep(0.2)
+            self.server.driver.stop(0)
 
     def update_cmd(self):
         cmd = self.main_cmd.get("1.0", tk.END).strip()
@@ -58,16 +58,13 @@ class EMSServerUI:
         serial = self.serial_status.get("1.0", tk.END).split("@")
         self.server.serial_port = serial[0]
         self.server.baud_rate = int(serial[1])
-        if self.server.ser:
-            self.server.ser.close()
-        self.server.setup_serial()
         self.serial_status.edit_modified(False)
 
     def start_server(self):
         self.server = EMSServer()
         self.server_status.insert(tk.END, self.server.host + ":" + str(self.server.port))
         self.serial_status.insert(tk.END, self.server.serial_port + "@" + str(self.server.baud_rate))
-        self.main_cmd.insert(tk.END, self.server.start_cmd.hex())
+        self.main_cmd.insert(tk.END, "")
         thread = threading.Thread(target=self.server.run, daemon=True)
         thread.start()
 
