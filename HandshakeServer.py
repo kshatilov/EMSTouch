@@ -47,21 +47,25 @@ class HSServer:
         def move(start, stop, up):
             ch = 0 if up else 1
             self.driver.start(ch)
-            self.driver.set_current(channel=ch, current_mA=EMSServer.EMS_MAX_CURRENT)
+            self.driver.set_current(channel=ch, current_mA=EMSServer.EMS_MIN_CURRENT)
             time.sleep((stop - start))
             self.driver.stop(ch)
 
         def gentle_move(start, stop, up):
             ch = 0 if up else 1
+            step = 0.005
+            steps = int((stop - start) / step) - 1
+            min = 3
+            max = 6
             self.driver.start(ch)
-            self.driver.set_current(channel=ch, current_mA=EMSServer.EMS_MIN_CURRENT)
-            time.sleep((stop - start) / 2)
-            self.driver.set_current(channel=ch, current_mA=EMSServer.EMS_MAX_CURRENT)
-            time.sleep((stop - start) / 2)
+            for i in range(steps):
+                curr = min + (max - min) * (i / steps)
+                self.driver.set_current(channel=ch, current_mA=curr)
+                time.sleep(step)
             self.driver.stop(ch)
 
         def shaking():
-            time.sleep(5 / 60)
+            # time.sleep(5 / 60)
             direction = False # down
 
             timestamps = [
