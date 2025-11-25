@@ -68,13 +68,13 @@ class HSServer:
                 time.sleep(step)
             self.driver.stop(ch)
 
-        def const_move(start, stop, up):
+        def const_move(start, stop, up, scale):
             ch = 0 if up else 1
             step = 0.01
             steps = int((stop - start) / step / 2)
             min = 5
             _max = 9
-            max = _max * (stop - start) / (0.33333333333)
+            max = _max * scale
             max = _max if max > _max else max
             curr = 0
 
@@ -90,21 +90,20 @@ class HSServer:
             self.driver.stop(ch)
 
         def shaking():
-            # time.sleep(5 / 60)
+            time.sleep(10 / 60)
             direction = False  # down
 
             timestamps = [
-                [5, 18],
-                [18, 28],
-                [28, 38],
-                [38, 43],
-                [43, 50],
-                [50, 58],
-                [58, 65],
-                [65, 69],
-                [69, 80]
+                [5, 15, 1],
+                [15, 26, 1],
+                [26, 34, 0.5],
+                [34, 41, 0.5],
+                [41, 48, 0.4],
+                [48, 53, 0.4],
+                [53, 62, 0.35],
+                [62, 67, 0.35],
+                [67, 90, 0.35],
             ]
-
             i = 0
 
             # grab
@@ -115,7 +114,7 @@ class HSServer:
                 k = 2
                 # move(timestamps[i][0] / 60, timestamps[i][1] / 60, direction)
                 # gentle_move(timestamps[i][0] / 60 * k, timestamps[i][1] / 60 * k, direction)
-                const_move(timestamps[i][0] / 60 * k, timestamps[i][1] / 60 * k, direction)
+                const_move(timestamps[i][0] / 60 * k, timestamps[i][1] / 60 * k, direction, timestamps[i][2])
                 direction = not direction
                 i += 1
                 if i >= len(timestamps): break
@@ -146,6 +145,19 @@ class HSServer:
                         self.isPlaying = False
                         for channel in [0, 1, 2]:
                             self.driver.stop(channel)
+
+                    elif "EMS_beg_tst_00" in data:
+                        channel = int(data[len(data) - 1])
+                        self.driver.start(channel)
+                        for current_mA in range(20, 80, 5):
+                            self.driver.set_current(channel=channel, current_mA=current_mA / 10)
+                            time.sleep(0.1)
+
+                        for current_mA in range(80, 20, -5):
+                            self.driver.set_current(channel=channel, current_mA=current_mA / 10)
+                            time.sleep(0.1)
+
+                        self.driver.stop(channel)
 
 
 if __name__ == "__main__":
