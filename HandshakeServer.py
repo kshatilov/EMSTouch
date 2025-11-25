@@ -9,7 +9,7 @@ from EMSServer import EMSServer
 class HSServer:
     HOST = "0.0.0.0"
     PORT = 1488
-    SERIAL = 'COM4'
+    SERIAL = 'COM5'
     BAUD_RATE = 115200
 
     def __init__(self):
@@ -54,19 +54,44 @@ class HSServer:
         def gentle_move(start, stop, up):
             ch = 0 if up else 1
             step = 0.005
-            steps = int((stop - start) / step) - 1
-            min = 3
-            max = 6
+            steps = int((stop - start) / step / 2)
+            min = 2
+            max = 8
             self.driver.start(ch)
             for i in range(steps):
                 curr = min + (max - min) * (i / steps)
+                self.driver.set_current(channel=ch, current_mA=curr)
+                time.sleep(step)
+            for i in range(steps):
+                curr = max - (max - min) * (i / steps)
+                self.driver.set_current(channel=ch, current_mA=curr)
+                time.sleep(step)
+            self.driver.stop(ch)
+
+        def const_move(start, stop, up):
+            ch = 0 if up else 1
+            step = 0.01
+            steps = int((stop - start) / step / 2)
+            min = 5
+            _max = 9
+            max = _max * (stop - start) / (0.33333333333)
+            max = _max if max > _max else max
+            curr = 0
+
+            self.driver.start(ch)
+            for i in range(steps):
+                curr = min + (max - min) * (i / steps)
+                self.driver.set_current(channel=ch, current_mA=curr)
+                time.sleep(step)
+            for i in range(steps):
+                curr = max - (max - min) * (i / steps)
                 self.driver.set_current(channel=ch, current_mA=curr)
                 time.sleep(step)
             self.driver.stop(ch)
 
         def shaking():
             # time.sleep(5 / 60)
-            direction = False # down
+            direction = False  # down
 
             timestamps = [
                 [5, 18],
@@ -79,6 +104,7 @@ class HSServer:
                 [65, 69],
                 [69, 80]
             ]
+
             i = 0
 
             # grab
@@ -86,8 +112,10 @@ class HSServer:
             self.driver.set_current(channel=2, current_mA=EMSServer.EMS_MIN_CURRENT)
 
             while self.isPlaying:
+                k = 2
                 # move(timestamps[i][0] / 60, timestamps[i][1] / 60, direction)
-                gentle_move(timestamps[i][0] / 60, timestamps[i][1] / 60, direction)
+                # gentle_move(timestamps[i][0] / 60 * k, timestamps[i][1] / 60 * k, direction)
+                const_move(timestamps[i][0] / 60 * k, timestamps[i][1] / 60 * k, direction)
                 direction = not direction
                 i += 1
                 if i >= len(timestamps): break
