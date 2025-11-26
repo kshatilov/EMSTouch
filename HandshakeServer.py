@@ -90,7 +90,7 @@ class HSServer:
             self.driver.stop(ch)
 
         def shaking():
-            time.sleep(10 / 60)
+            time.sleep(6 / 60)
             direction = False  # down
 
             timestamps = [

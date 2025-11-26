@@ -23,7 +23,7 @@ class EMGServer:
 
     def run(self):
         def sleeper():
-            time.sleep(1)
+            time.sleep(0.5)
 
         t = threading.Thread()
 
@@ -43,7 +43,7 @@ class EMGServer:
                         dst = int(data.replace(EMSServer.EMS_NET_DST_CMD, "").replace("E", "0"))
 
                     if 0 <= dst <= 500:
-                        self.myo.vibrate(2)
+                        self.myo.vibrate(1)
                         t = threading.Thread(target=sleeper)
                         t.start()
 
