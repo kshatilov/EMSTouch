@@ -18,11 +18,11 @@ def const_move(start, stop, up, m):
 
     for i in range(steps):
         curr = min + (max - min) * (i / steps)
-        values.append(curr  if up else -curr )
+        values.append(curr if up else -curr)
         # values.append(curr)
     for i in range(steps):
         curr = max - (max - min) * (i / steps)
-        values.append(curr  if up else -curr )
+        values.append(curr if up else -curr)
         # values.append(curr)
 
 
@@ -52,18 +52,21 @@ def shaking():
         if i >= len(timestamps): break
 
 
-# Your sequence of values
-
-shaking()
-
-# x = np.linspace(5, 10, 10)
-# values.extend(np.sin(x))
-
-window =3
-values = np.convolve(values, np.ones(window)/window, mode='valid')
+# shaking()
+# window =3
+# values = np.convolve(values, np.ones(window)/window, mode='valid')
 
 
 # Plot
+
+# Read line by line
+values = []
+with open("data/hs_trajectory_409_8.txt", "r") as f:
+    for line in f:
+        t = []
+        for v in line.strip().split(" "):
+            t.append(float(v))
+        values.append(t)
 
 plt.figure(figsize=(12, 6))
 plt.plot(values, marker='o', markersize=2, linewidth=1)

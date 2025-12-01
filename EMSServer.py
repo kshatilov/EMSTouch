@@ -9,7 +9,7 @@ import EMSnewMcuDriver
 class EMSServer:
     HOST = "0.0.0.0"
     PORT = 1488
-    SERIAL = 'COM4'
+    SERIAL = 'COM5'
     BAUD_RATE = 115200
 
     EMS_NET_START_CMD = "EMS_beg_def_000"

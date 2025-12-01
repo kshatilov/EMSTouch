@@ -1,6 +1,8 @@
+import random
 import socket
 import threading
 import time
+import struct
 
 import EMSnewMcuDriver
 from EMSServer import EMSServer
@@ -20,6 +22,9 @@ class HSServer:
         self.ser = None
         self.driver = None
         self.channels = [0]
+        self.trajectory = []
+        self.file_name = "data/hs_trajectory_" + str(random.randint(1, 10000)) + "_"
+        self.shakes = 0
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,17 +85,19 @@ class HSServer:
 
             self.driver.start(ch)
             for i in range(steps):
+                if not self.isPlaying: return
                 curr = min + (max - min) * (i / steps)
                 self.driver.set_current(channel=ch, current_mA=curr)
                 time.sleep(step)
             for i in range(steps):
+                if not self.isPlaying: return
                 curr = max - (max - min) * (i / steps)
                 self.driver.set_current(channel=ch, current_mA=curr)
                 time.sleep(step)
             self.driver.stop(ch)
 
         def shaking():
-            time.sleep(6 / 60)
+            time.sleep(3 / 60)
             direction = False  # down
 
             timestamps = [
@@ -123,41 +130,78 @@ class HSServer:
                 self.driver.stop(ch)
 
         t = threading.Thread()
+        timer_thread = threading.Thread()
 
         while True:
             conn, addr = self.sock.accept()
             with conn:
                 while True:
-                    data = conn.recv(len(EMSServer.EMS_NET_START_CMD.encode()))
+                    data = conn.recv(15)
                     if not data:
                         break
-                    print("Received:", data.decode())
-                    data = data.decode()
 
-                    if EMSServer.EMS_NET_DST_CMD in data:
-                        if self.isPlaying or t.is_alive():
-                            continue
-                        self.isPlaying = True
-                        t = threading.Thread(target=shaking())
-                        t.start()
+                    if "POS" == data[:3].decode():
+                        def unpack(value):
+                            return struct.unpack("<f", value)[0]
 
-                    elif data == EMSServer.EMS_NET_STOP_CMD:
-                        self.isPlaying = False
-                        for channel in [0, 1, 2]:
+                        data = data[3:]
+                        x = unpack(data[0:4])
+                        y = unpack(data[4:8])
+                        z = unpack(data[8:12])
+                        # print(f"Position received: x={x}, y={y}, z={z}")
+                        if timer_thread.is_alive():
+                            self.trajectory.append((x, y, z))
+
+                    else:
+                        data = data.decode()
+                        print("Received:", data)
+
+                        if "EMS_beg_hnd_" in data:
+                            if self.isPlaying or t.is_alive():
+                                continue
+                            self.isPlaying = True
+                            self.trajectory = []
+                            t = threading.Thread(target=shaking)
+                            t.start()
+
+                            def timer():
+                                slept = 0
+                                while True:
+                                    if not self.isPlaying:
+                                        break
+                                    if slept >= 5:
+                                        break
+                                    slept += 1
+                                    time.sleep(1)
+
+                            timer_thread = threading.Thread(target=timer)
+                            timer_thread.start()
+
+                        elif data == EMSServer.EMS_NET_STOP_CMD:
+                            self.isPlaying = False
+                            for channel in [0, 1, 2]:
+                                self.driver.stop(channel)
+                            if len(self.trajectory) == 0:
+                                continue
+                            self.shakes += 1
+                            with open(self.file_name + str(self.shakes) + ".txt", "w") as f:
+                                for line in self.trajectory:
+                                    for value in line:
+                                        f.write(str(value) + " ")
+                                    f.write("\n")
+
+                        elif "EMS_beg_tst_00" in data:
+                            channel = int(data[len(data) - 1])
+                            self.driver.start(channel)
+                            for current_mA in range(20, 80, 5):
+                                self.driver.set_current(channel=channel, current_mA=current_mA / 10)
+                                time.sleep(0.1)
+
+                            for current_mA in range(80, 20, -5):
+                                self.driver.set_current(channel=channel, current_mA=current_mA / 10)
+                                time.sleep(0.1)
+
                             self.driver.stop(channel)
-
-                    elif "EMS_beg_tst_00" in data:
-                        channel = int(data[len(data) - 1])
-                        self.driver.start(channel)
-                        for current_mA in range(20, 80, 5):
-                            self.driver.set_current(channel=channel, current_mA=current_mA / 10)
-                            time.sleep(0.1)
-
-                        for current_mA in range(80, 20, -5):
-                            self.driver.set_current(channel=channel, current_mA=current_mA / 10)
-                            time.sleep(0.1)
-
-                        self.driver.stop(channel)
 
 
 if __name__ == "__main__":

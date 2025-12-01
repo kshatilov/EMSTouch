@@ -39,7 +39,6 @@ class VibroHSServer:
 
                 [53, 62, 0.35],
                 [62, 67, 0.35],
-
             ]
 
             k = 2
@@ -60,7 +59,6 @@ class VibroHSServer:
                 v = vibro[str(t1[2])]
                 self.myo.vibrate(v)
                 interval = (t2[1] - t1[0]) / 60 * k
-                print(interval)
                 time.sleep(interval)
                 i += 2
 
@@ -83,7 +81,6 @@ class VibroHSServer:
                         print("Skipping command, previous still running")
                         continue
                     if EMSServer.EMS_NET_DST_CMD in data:
-                        print("detach: " + str(self.detach))
                         if self.detach:
                             t = threading.Thread(target=handshake)
                             self.isRunning = True
