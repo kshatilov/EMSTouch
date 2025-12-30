@@ -1,5 +1,6 @@
-import multiprocessing
+import random
 import socket
+import struct
 import threading
 import time
 
@@ -17,6 +18,9 @@ class VibroHSServer:
         self.sock = None
         self.isRunning = False
         self.detach = True
+        self.trajectory = []
+        self.file_name = "data/vibro_hs_trajectory_" + str(random.randint(1, 10000)) + "_"
+        self.shakes = 0
 
     def connect(self):
         self.myo.connect()
@@ -63,6 +67,7 @@ class VibroHSServer:
                 i += 2
 
         t = threading.Thread()
+        timer_thread = threading.Thread()
 
         while True:
             conn, addr = self.sock.accept()
@@ -71,21 +76,63 @@ class VibroHSServer:
                     data = conn.recv(len(EMSServer.EMS_NET_START_CMD.encode()))
                     if not data:
                         break
-                    print("Received:", data.decode())
-                    data = data.decode()
-                    if data == EMSServer.EMS_NET_STOP_CMD:
-                        self.isRunning = False
-                        self.detach = True
-                        t.join()
-                    if t.is_alive():
-                        print("Skipping command, previous still running")
-                        continue
-                    if EMSServer.EMS_NET_DST_CMD in data:
-                        if self.detach:
-                            t = threading.Thread(target=handshake)
-                            self.isRunning = True
-                            self.detach = False
-                            t.start()
+
+                    # handshake trajectory recording
+                    if "POS" == data[:3].decode():
+                        def unpack(value):
+                            return struct.unpack("<f", value)[0]
+
+                        data = data[3:]
+                        x = unpack(data[0:4])
+                        y = unpack(data[4:8])
+                        z = unpack(data[8:12])
+                        if timer_thread.is_alive():
+                            self.trajectory.append((x, y, z))
+
+                    # stopping condition
+                    else:
+                        data = data.decode()
+                        print("Command received:", data)
+                        if data == EMSServer.EMS_NET_STOP_CMD:
+                            self.isRunning = False
+                            self.detach = True
+                            t.join()
+                            if len(self.trajectory) == 0:
+                                continue
+                            self.shakes += 1
+                            with open(self.file_name + str(self.shakes) + ".txt", "w") as f:
+                                for line in self.trajectory:
+                                    for value in line:
+                                        f.write(str(value) + " ")
+                                    f.write("\n")
+
+                        # skip
+                        if t.is_alive():
+                            print("Skipping command, previous still running")
+                            continue
+
+                        # starting condition
+                        if "EMS_beg_hnd_" in data:
+                            if self.detach:
+                                t = threading.Thread(target=handshake)
+                                self.isRunning = True
+                                self.detach = False
+                                t.start()
+
+                                self.trajectory = []
+
+                                def timer():
+                                    slept = 0
+                                    while True:
+                                        if not self.isRunning:
+                                            break
+                                        if slept >= 4:
+                                            break
+                                        slept += 1
+                                        time.sleep(1)
+
+                                timer_thread = threading.Thread(target=timer)
+                                timer_thread.start()
 
 
 if __name__ == "__main__":

@@ -42,7 +42,6 @@ class EMGServer:
                     if EMSServer.EMS_NET_DST_CMD in data:
                         dst = int(data.replace(EMSServer.EMS_NET_DST_CMD, "").replace("E", "0"))
 
-                    if 0 <= dst <= 500:
                         self.myo.vibrate(1)
                         t = threading.Thread(target=sleeper)
                         t.start()
