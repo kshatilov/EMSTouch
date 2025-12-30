@@ -173,7 +173,7 @@ class HSServer:
 
             # grab
             self.driver.start(2)
-            self.driver.set_current(channel=2, current_mA=EMSServer.EMS_MIN_CURRENT / 2)
+            self.driver.set_current(channel=2, current_mA=EMSServer.EMS_MIN_CURRENT)
 
             while self.isPlaying:
 
@@ -217,8 +217,8 @@ class HSServer:
                                 continue
                             self.isPlaying = True
                             self.trajectory = []
-                            t = threading.Thread(target=shaking)
-                            # t = threading.Thread(target=new_shaking)
+                            # t = threading.Thread(target=shaking)
+                            t = threading.Thread(target=new_shaking)
                             t.start()
 
                             def timer():
